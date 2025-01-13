@@ -1,0 +1,6 @@
+*.txt
+config/*
+assets/*
+test.py
+.venv/*
+lib/mongo.py!/requirements.txt
