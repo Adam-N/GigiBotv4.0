@@ -111,8 +111,9 @@ class Util:
                 'modlog_channel': ctx.channel.id,
                 'welcome_channel': ctx.channel.id,
                 'lounge': ctx.channel.id,
+                "guild_channel": ctx.channel.id,
+                "support_channel": ctx.channel.id,
                 'bot_channels': [],
-                'exp_blacklist': []
             },
             'role_config': {
                 'posse': 1,
@@ -127,7 +128,7 @@ class Util:
             },
             "triumphant_config": {
                 "triumph_channel": ctx.channel.id,
-                "triumph_react": "\ud83c\udfc6"
+                "triumph_react": "\ud83c\udf96\ufe0f"
             }
         }
 

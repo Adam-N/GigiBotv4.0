@@ -200,6 +200,7 @@ class Starboard(commands.Cog, name='Starboard'):
 
 
     @app_commands.command(name="my_starboard_stats")
+    @commands.guild_only()
     async def my_stats(self, interaction: discord.Interaction, user: discord.Member = None):
         """Get yours or others stats from the starboard!"""
         if user is None:
@@ -262,6 +263,7 @@ class Starboard(commands.Cog, name='Starboard'):
             app_commands.Choice(name="Top Messages", value="messages"),
             app_commands.Choice(name="Top Users", value="leaderboard"),
         ])
+    @commands.guild_only()
     async def leaderboard(self, interaction: discord.Interaction, stat_table:str):
         """Crab leaderboard! Pick from top messages or top users."""
         await interaction.response.defer()
@@ -391,6 +393,7 @@ class Starboard(commands.Cog, name='Starboard'):
 
     @app_commands.command(name="create_star_db")
     @commands.is_owner()
+    @commands.guild_only()
     async def create_star_db(self, interaction:discord.Interaction):
         """To add starboard database. Only use to initiate if error."""
         await interaction.response.send_message(embed=discord.Embed(title="Starting."))
@@ -441,6 +444,7 @@ class Starboard(commands.Cog, name='Starboard'):
 
     @app_commands.command(name="generatedata")
     @commands.is_owner()
+    @commands.guild_only()
     async def generate(self, interaction: discord.Interaction):
         """Only used to generate testing data."""
         await interaction.response.defer()
@@ -474,8 +478,9 @@ class Starboard(commands.Cog, name='Starboard'):
 
     @app_commands.command(name="add_user")
     @commands.is_owner()
+    @commands.guild_only()
     async def add_user(self, interaction:discord.Interaction, user_id: str):
-        """Use to add a user from the starboard leaderboard."""
+        """Use to add a user to the starboard leaderboard."""
         user_id = int(user_id)
         sql = f"""SELECT 1 FROM leaderboard WHERE id = {user_id}"""
         data = await self.execute(sql, interaction.guild_id, fetchone=True)
