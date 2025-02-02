@@ -9,6 +9,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from master import MasterCog
+
 
 class Starboard(commands.Cog, name='Starboard'):
     def __init__(self, bot):
@@ -172,7 +174,7 @@ class Starboard(commands.Cog, name='Starboard'):
                         # 0	                1		        2		    3		        4               5
                         sql = f"""SELECT * FROM messages
                                 WHERE id = {message.id}"""
-                        star_message = await self.execute(sql,payload.guild_id,fetchone=True)
+                        star_message = await MasterCog.execute(MasterCog(self), sql,payload.guild_id, "starboard",fetchone=True)
                         if str(payload.user_id) not in star_message[5]: # Get message then find who starred it.
                             await self.increment_table(payload.guild_id,"leaderboard",payload.user_id, "stars_given")
                             await self.increment_table(payload.guild_id,"messages",message.id, "star_number")
@@ -225,7 +227,7 @@ class Starboard(commands.Cog, name='Starboard'):
         sql = f"""SELECT id, author_id, channel_id, star_number
                 FROM messages
                 ORDER BY star_number DESC;"""
-        messages = await self.execute(sql,guild.id,fetchall=True)
+        messages = await MasterCog.execute(MasterCog(self),sql,guild.id, "starboard",fetchall=True)
         user_str = None
         rank = 1
         listing = ''
@@ -248,7 +250,7 @@ class Starboard(commands.Cog, name='Starboard'):
         new_embed.add_field(name=f"{user.display_name}\'s Top Starred Messages", value=listing, inline=True)
         sql = f"""SELECT * FROM leaderboard
                 WHERE id = {user.id}"""
-        user_profile = await self.execute(sql, guild.id, fetchone=True)
+        user_profile = await MasterCog.execute(MasterCog(self), sql, guild.id, "starboard", fetchone=True)
 
         new_embed.add_field(name="Number of Self-Starred Posts:", value=f"{user_profile[3]}",
                             inline=False)
@@ -289,7 +291,7 @@ class Starboard(commands.Cog, name='Starboard'):
             sql = f"""SELECT id, author_id, channel_id, star_number
                     FROM messages
                     ORDER BY star_number DESC;"""
-            messages = await self.execute(sql, guild.id, fetchall=True)
+            messages = await MasterCog.execute(MasterCog(self), sql, guild.id, "starboard", fetchall=True)
             print(2)
             rank = 1
             listing, list_message, f_name = '', '', ''
@@ -312,7 +314,7 @@ class Starboard(commands.Cog, name='Starboard'):
             sql = """SELECT id, star_number
             FROM messages"""
             try:
-                sb_stats = await self.execute(sql,guild.id,fetchall=True)
+                sb_stats = await MasterCog.execute(MasterCog(self), sql,guild.id, "starboard",fetchall=True)
             except Exception as e:
                 print(e)
                 return
@@ -366,7 +368,7 @@ class Starboard(commands.Cog, name='Starboard'):
                     listing += f'\n__**Your Ranking:**__\n{my_stat}'
 
                 sql = """SELECT * FROM leaderboard;"""
-                sb_stats = await self.execute(sql, guild.id, fetchall=True)
+                sb_stats = await MasterCog.execute(MasterCog(self), sql, guild.id, "starboard", fetchall=True)
 
                 stat_counter = 0
                 for user in sb_stats:
@@ -425,7 +427,7 @@ class Starboard(commands.Cog, name='Starboard'):
                      stars_given INTEGER,
                      starred_messages INTEGER, 
                      self_starred INTEGER);"""
-        await self.execute(sql, interaction.guild_id, commit=True)
+        await MasterCog.execute(MasterCog(self),sql, interaction.guild_id, "starboard", commit=True)
         sql = """CREATE TABLE IF NOT EXISTS messages 
                     (id INTEGER PRIMARY KEY,
                     star_number INTEGER, 
@@ -433,7 +435,7 @@ class Starboard(commands.Cog, name='Starboard'):
                     channel_id INTEGER,
                     sb_message_id INTEGER, 
                     starrers BLOB);"""
-        await self.execute(sql, interaction.guild_id, commit=True)
+        await MasterCog.execute(MasterCog(self),sql, interaction.guild_id, "starboard", commit=True)
         users = interaction.guild.members
         for user in users:
             if not user.bot:
@@ -462,7 +464,7 @@ class Starboard(commands.Cog, name='Starboard'):
         user_id = int(user_id)
 
         sql = f"""SELECT 1 FROM leaderboard WHERE id = {user_id}"""
-        data = await self.execute(sql,interaction.guild_id,fetchone=True)
+        data = await MasterCog.execute(MasterCog(self), sql,interaction.guild_id, "starboard",fetchone=True)
         if not data:
             await interaction.response.send_message(
                 embed=discord.Embed(title=f"Error querying the database. User did not exist in database."))
@@ -483,7 +485,7 @@ class Starboard(commands.Cog, name='Starboard'):
         """Use to add a user to the starboard leaderboard."""
         user_id = int(user_id)
         sql = f"""SELECT 1 FROM leaderboard WHERE id = {user_id}"""
-        data = await self.execute(sql, interaction.guild_id, fetchone=True)
+        data = await MasterCog.execute(MasterCog(self), sql, interaction.guild_id, "starboard", fetchone=True)
         if data:
             await interaction.response.send_message(
                 embed=discord.Embed(title=f"User already exists in the database."))
@@ -504,7 +506,7 @@ class Starboard(commands.Cog, name='Starboard'):
         FROM {table}
         ORDER BY {value} DESC;"""
 
-        return await self.execute(sql, guild_id, fetchall=True)
+        return await MasterCog.execute(MasterCog(self), sql, guild_id, "starboard", fetchall=True)
 
     async def build_table(self, guild_id:int, table: str, parameters: tuple):
         if "leaderboard" in table:
@@ -536,24 +538,24 @@ class Starboard(commands.Cog, name='Starboard'):
             return
 
 
-        await self.execute(sql, guild_id, parameters, commit=True)
+        await MasterCog.execute(MasterCog(self), sql, guild_id, "starboard", parameters, commit=True)
 
     async def rem_from_table(self, guild_id:int,table: str, id:int):
         sql = f"""DELETE FROM {table} 
         WHERE id = {id}; """
-        await self.execute(sql, guild_id, commit=True)
+        await MasterCog.execute(MasterCog(self),sql, guild_id, "starboard", commit=True)
 
     async def update_multiple_values_table(self, guild_id:int, table:str, id:int, to_update: tuple, values:tuple):
         sql = f"""UPDATE {table}
         SET {to_update} = {values}
         WHERE id = {id};"""
-        await self.execute(sql, guild_id, commit=True)
+        await MasterCog.execute(MasterCog(self),sql, guild_id, "starboard", commit=True)
 
     async def update_single_value_table(self,  guild_id:int, table:str, to_update: str, parameters: tuple):
         sql = f"""UPDATE {table}
         SET {to_update} = ?
         WHERE id = ?;"""
-        await self.execute(sql, guild_id, parameters, commit=True)
+        await MasterCog.execute(MasterCog(self),sql, guild_id, "starboard", parameters, commit=True)
 
 
     async def increment_table(self, guild_id:int, table:str, id:int, to_update: str):
@@ -561,23 +563,8 @@ class Starboard(commands.Cog, name='Starboard'):
             SET {to_update} = {to_update} + 1
             WHERE id = {id}"""
 
-       await self.execute(sql, guild_id, commit=True)
+       await MasterCog.execute(MasterCog(self),sql, guild_id, "starboard", commit=True)
 
-    async def execute(self, sql: str,guild_id:int, parameters: tuple = None, fetchone=False, fetchall=False, commit=False):
-        async with aiosqlite.connect(f'config/{guild_id}/starboard.db') as db:
-            if not parameters:
-                parameters = ()
-            data = None
-            cursor = await db.cursor()
-            await cursor.execute(sql, parameters)
-
-            if commit:
-                await db.commit()
-            if fetchone:
-                data = await cursor.fetchone()
-            if fetchall:
-                data = await cursor.fetchall()
-            return data
 
 
 async def setup(bot: commands.Bot) -> None:

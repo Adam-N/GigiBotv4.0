@@ -50,7 +50,7 @@ class Mod(commands.Cog):
             embed.add_field(name='\uFEFF', value=perms)
             await ctx.send(content=None, embed=embed)
 
-    @app_commands.command()
+    @app_commands.command(name="check")
     @commands.has_permissions(manage_permissions=True)
     @commands.guild_only()
     async def check(self, interaction: discord.Interaction, member: discord.Member):
@@ -65,6 +65,13 @@ class Mod(commands.Cog):
             embed.add_field(name="Top role:", value=f"{member.top_role}")
             embed.set_thumbnail(url=member.avatar.url)
             await ctx.send(embed=embed)
+
+    @app_commands.command(name="echo")
+    @commands.guild_only()
+    @commands.is_owner()
+    async def echo(self, interaction: discord.Interaction, channel:discord.TextChannel, message: str):
+        await channel.send(message)
+        await interaction.response.send_message(f"Message sent to {channel.name}. It says {message}", ephemeral=True)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Mod(bot))

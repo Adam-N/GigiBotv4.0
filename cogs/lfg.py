@@ -37,7 +37,7 @@ class LFGCog(commands.Cog, name='lfg'):
     @tasks.loop(minutes=30)
     async def lfg_message(self):
         try:
-            guild = self.bot.get_guild(**GUILD ID HERE**)
+            guild = self.bot.get_guild(334925467431862272)
             if os.path.isfile(f'config/{guild.id}/config.json'):
                 with open(f'config/{guild.id}/config.json', 'r') as f:
                     config = json.load(f)
@@ -50,12 +50,7 @@ class LFGCog(commands.Cog, name='lfg'):
                     last_message = await channel.fetch_message(channel.last_message_id)
                 except NotFound:
                     messages = [message async for message in channel.history(limit=4)]
-                    for message in messages:
-                        try:
-                            last_message = message
-                            break
-                        except:
-                            continue
+                    last_message = messages[0]
                 if last_message.author.bot:
                     return
                 if last_message.created_at + dt.timedelta(minutes=360) <= discord.utils.utcnow():

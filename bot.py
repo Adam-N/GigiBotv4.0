@@ -1,11 +1,15 @@
 import os
 import json
 import asyncio
+import logging
 
 import discord
 from discord.ext import commands
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from cogs import birthday
 from cogs.drive import Drive
+from cogs.birthday import Birthday
 
 
 def get_prefix(bot, message):
@@ -21,15 +25,14 @@ def get_prefix(bot, message):
         return ['*']
 
 
-initial_cogs = ["master", "cogs.friend", "cogs.mod", "cogs.starboard", "cogs.profile", "cogs.triumphant", "cogs.drive"]
+initial_cogs = ["master", "cogs.friend", "cogs.mod", "cogs.starboard", "cogs.profile", "cogs.triumphant", "cogs.drive",
+                "cogs.lfg", "cogs.welcome", "cogs.birthday"]
 
 bot = commands.Bot(command_prefix=get_prefix, description='A bot designed for GoldxGuns', intents=discord.Intents.all(),
                    slash_commands=True)
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
-async def main():
-    await bot.login(token=token)
-    await bot.connect()
-
+schedule = AsyncIOScheduler()
 
 @bot.command(hidden=True)
 @commands.is_owner()
@@ -59,6 +62,18 @@ async def on_ready():
     print(f'Successfully logged in and booted...!')
     game = discord.Game(";help for more information")
     await bot.change_presence(status=discord.Status.idle, activity=game)
+
+async def daily():
+    """Daily reset timer"""
+    for guild in bot.guilds:
+        if os.path.isfile(f'config/{str(guild.id)}/config.json'):
+            with open(f'config/{str(guild.id)}/config.json', 'r') as f:
+                config = json.load(f)
+        if config['channel_config']['config_channel']:
+            config_channel = bot.get_channel(config['channel_config']['config_channel'])
+        # Daily Reset Functions
+        await birthday.daily_birthday(Birthday(bot),guild.id)
+
 
 async def weekly():
     """Weekly reset timer"""
@@ -97,33 +112,20 @@ async def triumphant_reset(server):
         json.dump(triumphant, f)
     try:
         await Drive.weekly_reminder(Drive(bot), server.id)
-    except:
+    except Exception as e:
+        print(e)
         pass
     try:
         await Drive.create(Drive(bot))
-    except:
+    except Exception as e:
+        print(e)
         pass
     reset_embed = discord.Embed(title="\U0001f5d3| New Week Starts Here. Get that bread!")
     await chan.send(embed=reset_embed)
 
-"""@bot.event
-async def on_error(event, *args, **kwargs):
-    config_channel = await bot.fetch_channel(590014505753509888)
-    message = event.message
-    if os.path.isfile(f'config/{str(message.guild.id)}/config.json'):
-        with open(f'config/{str(message.guild.id)}/config.json', 'r') as f:
-            config = json.load(f)
-        config_channel = await bot.fetch_channel(config['channel_config']['config_channel'])
-    else:
-        return
-    new_embed = discord.Embed(title=f'**[Error]** {type(event).__name__} **[Error]**')
-    new_embed.add_field(name="Event", value=f"{args}")
-    if kwargs:
-        new_embed.add_field(name="Arguments", value=f"{kwargs}")
-    await config_channel.send(embed=new_embed)"""
-
 
 print('\nLoading token and connecting to client...')
 token = open('token.txt', 'r').readline()
-# schedule.add_job(monthly, 'cron', month='*', day='1')
-asyncio.run(main())
+schedule.add_job(daily, 'cron', day='*', hour=8)
+schedule.add_job(weekly, 'cron', week='*', day_of_week='sun', hour=0)
+bot.run(token,log_handler=handler)

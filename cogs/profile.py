@@ -1,7 +1,13 @@
+import asyncio
+import os
+
 import aiosqlite
 import discord
 from discord import  app_commands
 from discord.ext import commands
+
+from master import MasterCog
+
 
 class Profile(commands.Cog):
     def __init__(self, bot):
@@ -12,6 +18,29 @@ class Profile(commands.Cog):
     @commands.guild_only()
     async def build_profile(self, interaction: discord.Interaction):
         await interaction.response.defer()
+        if os.path.isfile(f'config/{interaction.guild_id}/profile.db'):
+            await interaction.edit_original_response(embed =discord.Embed(title="Do you want to initiate new database? A file already exists."))
+            reply = await interaction.original_response()
+            await reply.add_reaction('👍')
+            def check(reaction, user):
+                return user == interaction.user and str(reaction.emoji) == '👍'
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=20.0, check=check)
+            except asyncio.TimeoutError:
+                await interaction.edit_original_response(embed=discord.Embed(title='You waited too long. 👎'))
+                await reply.clear_reactions()
+
+            if str(reaction) != '👍' or user != interaction.user:
+                await interaction.edit_original_response(embed=discord.Embed(title='Something went wrong.'))
+                return
+            elif str(reaction) == '👍' and user == interaction.user:
+                await reply.clear_reactions()
+                os.remove(f'config/{interaction.guild_id}/profile.db')
+            else:
+                await interaction.edit_original_response(embed=discord.Embed(title='Something went wrong.'))
+                return
+        elif not os.path.isfile(f'config/{interaction.guild_id}/profile.db'):
+            await interaction.edit_original_response(embed =discord.Embed(title="No Database Found. Creating New One"))
         sql = """CREATE TABLE IF NOT EXISTS profiles 
                             (id INTEGER PRIMARY KEY,
                             playstation TEXT, 
@@ -21,7 +50,7 @@ class Profile(commands.Cog):
                             steam TEXT,
                             warframe TEXT,
                             battle_net TEXT);"""
-        await self.execute(sql, interaction.guild_id, commit = True)
+        await MasterCog.execute(MasterCog(self), sql, interaction.guild_id,"profile", commit = True)
 
         for member in interaction.guild.members:
             if not member.bot:
@@ -32,12 +61,12 @@ class Profile(commands.Cog):
         sql = """INSERT INTO profiles (id,playstation,microsoft,bungie, xiv, steam, warframe, battle_net) 
         VALUES (?,?,?,?,?,?,?,?)"""
         parameters = (member.id, "", "", "", "", "", "", "")
-        await self.execute(sql, guild_id, parameters, commit=True)
+        await MasterCog.execute(MasterCog(self), sql, guild_id,"profile", parameters, commit=True)
 
     async def del_profile(self, guild_id: int, member: discord.Member):
         sql = f"""DELETE FROM profiles
                 WHERE id = {member.id};"""
-        await self.execute(sql,guild_id,commit=True)
+        await MasterCog.execute(MasterCog(self), sql,guild_id,"profile",commit=True)
 
     @app_commands.command(name='profile_set')
     @app_commands.choices(account = [
@@ -61,7 +90,7 @@ class Profile(commands.Cog):
         WHERE id = ?;"""
 
         parameters = (username, interaction.user.id)
-        await self.execute(sql,interaction.guild_id,parameters,commit=True)
+        await MasterCog.execute(MasterCog(self), sql,interaction.guild_id,"profile",parameters,commit=True)
 
         if "xiv" in account:
             account = "Final Fantasy XIV"
@@ -89,7 +118,7 @@ class Profile(commands.Cog):
             SET {account} = ?
             WHERE id = ?;"""
         parameters = ("", interaction.user.id)
-        await self.execute(sql, interaction.guild_id, parameters, commit=True)
+        await MasterCog.execute(MasterCog(self), sql, interaction.guild_id,"profile", parameters, commit=True)
         if "xiv" in account:
             account = "Final Fantasy XIV"
         elif "battle_net" in account:
@@ -120,7 +149,7 @@ class Profile(commands.Cog):
         SET {account} = ?
         WHERE id = ?;"""
         parameters = (username, member.id)
-        await self.execute(sql,interaction.guild_id,parameters,commit=True)
+        await MasterCog.execute(MasterCog(self), sql,interaction.guild_id,parameters,"profile",commit=True)
 
         if "xiv" in account:
             account = "Final Fantasy XIV"
@@ -152,7 +181,7 @@ class Profile(commands.Cog):
                     SET {account} = ?
                     WHERE id = ?;"""
         parameters = ("", member.id)
-        await self.execute(sql, interaction.guild_id, parameters, commit=True)
+        await MasterCog.execute(MasterCog(self),sql, interaction.guild_id,"profile", parameters, commit=True)
         if "xiv" in account:
             account = "Final Fantasy XIV"
         elif "battle_net" in account:
@@ -180,7 +209,7 @@ class Profile(commands.Cog):
             member = interaction.user
         sql = f"""SELECT {account} FROM profiles
                 WHERE id = {member.id}"""
-        data = await self.execute(sql,interaction.guild_id,fetchone=True)
+        data = await MasterCog.execute(MasterCog(self), sql,interaction.guild_id,"profile",fetchone=True)
 
         if "xiv" in account:
             account = "Final Fantasy XIV"
@@ -208,7 +237,7 @@ class Profile(commands.Cog):
         sql = f"""SELECT * FROM profiles
                 WHERE id = {member.id}"""
 
-        data = await self.execute(sql,interaction.guild_id,fetchall=True)
+        data = await MasterCog.execute(MasterCog(self), sql,interaction.guild_id, "profile",fetchall=True)
 
         embed = discord.Embed(title=f"{member.display_name}'s Profile!")
         embed.set_author(name=interaction.guild.name, icon_url=interaction.guild.icon.url)
@@ -236,21 +265,6 @@ class Profile(commands.Cog):
                 account = "Battle.Net"
             embed.add_field(name=f"__**{account}:**__", value=f"{data[0][i]}")
         await interaction.followup.send(embed=embed)
-
-    async def execute(self, sql: str,guild_id:int, parameters: tuple = None, fetchone=False, fetchall=False, commit=False):
-        async with aiosqlite.connect(f'config/{guild_id}/profile.db') as db:
-            if not parameters:
-                parameters = ()
-            data = None
-            cursor = await db.cursor()
-            await cursor.execute(sql, parameters)
-            if commit:
-                await db.commit()
-            if fetchone:
-                data = await cursor.fetchone()
-            if fetchall:
-                data = await cursor.fetchall()
-            return data
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(Profile(bot))

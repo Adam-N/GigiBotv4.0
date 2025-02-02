@@ -10,6 +10,7 @@ from cogs.profile import Profile
 
 from discord.errors import Forbidden
 
+from master import MasterCog
 
 class Triumphant(commands.Cog, name='Triumphant'):
     def __init__(self, bot):
@@ -78,7 +79,7 @@ class Triumphant(commands.Cog, name='Triumphant'):
                 sql = f"""SELECT * FROM profiles WHERE playstation = ? OR microsoft = ? 
                 OR bungie = ? OR xiv = ? OR steam = ? OR warframe = ? OR battle_net = ?;"""
 
-                user = await Profile.execute(self.bot,sql,guild.id,
+                user = await MasterCog.execute(MasterCog(self.bot),sql,guild.id,"profile",
                                              (description,description,description,
                                               description,description,description,description),fetchone=True)
 
@@ -91,7 +92,7 @@ class Triumphant(commands.Cog, name='Triumphant'):
                     sql = f"""SELECT * FROM profiles WHERE playstation = ? OR microsoft = ? 
                     OR bungie = ? OR xiv = ? OR steam = ? OR warframe = ? OR battle_net = ?;"""
                     try:
-                        user = await Profile.execute(self.bot, sql, guild.id,(copy_embed["fields"][0]["value"],
+                        user = await MasterCog.execute(MasterCog(self.bot), sql, guild.id,"profile",(copy_embed["fields"][0]["value"],
                                                                           copy_embed["fields"][0]["value"],
                                                                           copy_embed["fields"][0]["value"],
                                                                           copy_embed["fields"][0]["value"],

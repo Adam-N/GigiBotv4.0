@@ -3,6 +3,8 @@ import json
 from typing import List
 
 import time
+
+import aiosqlite
 import emoji
 import discord
 from discord import app_commands
@@ -199,8 +201,22 @@ class MasterCog(commands.Cog):
         """Resets the servers config file. Only use when something is broken."""
         await Util.reset_config(await self.bot.get_context(interaction))
 
+    async def execute(self, sql: str, guild_id: int, database: str, parameters: tuple = None, fetchone=False,
+                      fetchall=False, commit=False):
+        async with aiosqlite.connect(f'config/{guild_id}/{database}.db') as db:
+            if not parameters:
+                parameters = ()
+            data = None
+            cursor = await db.cursor()
+            await cursor.execute(sql, parameters)
+            if commit:
+                await db.commit()
+            if fetchone:
+                data = await cursor.fetchone()
+            if fetchall:
+                data = await cursor.fetchall()
+            return data
 
-   
     @app_commands.command(name="setstatus")
     @commands.is_owner()
     @app_commands.choices(
